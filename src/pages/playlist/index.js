@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Creators as PlaylistDetailsActions } from '../../store/ducks/playlistDetails';
+import { Creators as PlayerActions } from '../../store/ducks/player';
 
 import Loading from '../../components/Loading';
 import { Container, Header, SongList } from './styles';
@@ -23,34 +24,48 @@ class Playlist extends Component {
         thumbnail: PropTypes.string,
         title: PropTypes.string,
         description: PropTypes.string,
-        songs: PropTypes.arrayOf(PropTypes.shape({
-          id: PropTypes.number,
-          title: PropTypes.string,
-          author: PropTypes.string,
-          album: PropTypes.string,
-        }))
+        songs: PropTypes.arrayOf(
+          PropTypes.shape({
+            id: PropTypes.number,
+            title: PropTypes.string,
+            author: PropTypes.string,
+            album: PropTypes.string,
+          }),
+        ),
       }),
       loading: PropTypes.bool,
     }).isRequired,
-  }
+    loadSong: PropTypes.func.isRequired,
+  };
+
   componentDidMount() {
     this.loadPlaylistDetails();
   }
 
   componentDidUpdate(prevProps) {
-    if (prevProps.match.params.id !== this.props.match.params.id) {
+    const {
+      match: { params },
+    } = this.props;
+
+    if (prevProps.match.params.id !== params.id) {
       this.loadPlaylistDetails();
     }
   }
 
   loadPlaylistDetails = () => {
-    const { id } = this.props.match.params;
+    const {
+      match: { params },
+      getPlaylistDetailsRequest,
+    } = this.props;
 
-    this.props.getPlaylistDetailsRequest(id);
+    getPlaylistDetailsRequest(params.id);
   };
 
   renderDetails = () => {
-    const playlist = this.props.playlistDetails.data;
+    const {
+      playlistDetails: { data: playlist },
+      loadSong,
+    } = this.props;
 
     return (
       <Container>
@@ -89,7 +104,7 @@ músicas
               </tr>
             ) : (
               playlist.songs.map(song => (
-                <tr key={song.id}>
+                <tr key={song.id} onDoubleClick={() => loadSong(song)}>
                   <td>
                     <img src={PlusIcon} alt="Adicionar" />
                   </td>
@@ -107,7 +122,9 @@ músicas
   };
 
   render() {
-    return this.props.playlistDetails.loading ? (
+    const { playlistDetails } = this.props;
+
+    return playlistDetails.loading ? (
       <Container loading>
         <Loading />
       </Container>
@@ -121,7 +138,7 @@ const mapStateToProps = state => ({
   playlistDetails: state.playlistDetails,
 });
 
-const mapDispatchToProps = dispatch => bindActionCreators(PlaylistDetailsActions, dispatch);
+const mapDispatchToProps = dispatch => bindActionCreators({ ...PlaylistDetailsActions, ...PlayerActions }, dispatch);
 
 export default connect(
   mapStateToProps,
