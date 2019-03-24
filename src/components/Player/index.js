@@ -6,6 +6,7 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Creators as PlayerActions } from '../../store/ducks/player';
+import { msToTime } from '../../services/timeHelper';
 
 import {
   Container, Current, Volume, Progress, Controls, Time, ProgressSlider,
@@ -20,7 +21,7 @@ import ForwardIcon from '../../assets/images/forward.svg';
 import RepeatIcon from '../../assets/images/repeat.svg';
 
 const Player = ({
-  player: { currentSong, status },
+  player,
   play,
   pause,
   next,
@@ -28,24 +29,29 @@ const Player = ({
   playing,
   position,
   duration,
+  progress,
+  positionShown,
+  handlePosition,
+  setPosition,
 }) => (
   <Container>
-    {!!currentSong && (
+    {!!player.currentSong && (
       <Sound
-        url={currentSong.file}
-        playStatus={status}
+        url={player.currentSong.file}
+        playStatus={player.status}
         onFinishedPlaying={next}
         onPlaying={playing}
+        position={player.position}
       />
     )}
     <Current>
-      {!!currentSong && (
+      {!!player.currentSong && (
         <Fragment>
-          <img src={currentSong.thumbnail} alt={currentSong.title} />
+          <img src={player.currentSong.thumbnail} alt={player.currentSong.title} />
 
           <div>
-            <span>{currentSong.title}</span>
-            <small>{currentSong.author}</small>
+            <span>{player.currentSong.title}</span>
+            <small>{player.currentSong.author}</small>
           </div>
         </Fragment>
       )}
@@ -59,7 +65,7 @@ const Player = ({
         <button type="button" onClick={prev}>
           <img src={BackwardIcon} alt="Backward" />
         </button>
-        {!!currentSong && status === Sound.status.PLAYING ? (
+        {!!player.currentSong && player.status === Sound.status.PLAYING ? (
           <button type="button" onClick={pause}>
             <img src={PauseIcon} alt="Pause" />
           </button>
@@ -76,12 +82,16 @@ const Player = ({
         </button>
       </Controls>
       <Time>
-        <span>{position}</span>
+        <span>{positionShown || position}</span>
         <ProgressSlider>
           <Slider
             railStyle={{ background: '#404040', borderRadius: 10 }}
             trackStyle={{ background: '#1ED760' }}
             handleStyle={{ border: 0 }}
+            max={1000}
+            onChange={value => handlePosition(value / 1000)}
+            onAfterChange={value => setPosition(value / 1000)}
+            value={progress}
           />
         </ProgressSlider>
         <span>{duration}</span>
@@ -114,24 +124,24 @@ Player.propTypes = {
   next: PropTypes.func.isRequired,
   prev: PropTypes.func.isRequired,
   playing: PropTypes.func.isRequired,
+  handlePosition: PropTypes.func.isRequired,
+  setPosition: PropTypes.func.isRequired,
   position: PropTypes.string.isRequired,
+  positionShown: PropTypes.string.isRequired,
   duration: PropTypes.string.isRequired,
+  progress: PropTypes.number.isRequired,
 };
-
-function msToTime(duration) {
-  console.log(duration);
-  let seconds = parseInt((duration / 1000) % 60, 10);
-  const minutes = parseInt((duration / (1000 * 60)) % 60, 10);
-
-  seconds = seconds < 10 ? `0${seconds}` : seconds;
-
-  return `${minutes}:${seconds}`;
-}
 
 const mapStateToProps = state => ({
   player: state.player,
   position: msToTime(state.player.position),
+  positionShown: msToTime(state.player.positionShown),
   duration: msToTime(state.player.duration),
+  progress:
+    parseInt(
+      (state.player.positionShown || state.player.position) * (1000 / state.player.duration),
+      10,
+    ) || 0,
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators(PlayerActions, dispatch);
